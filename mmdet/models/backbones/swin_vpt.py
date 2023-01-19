@@ -658,12 +658,53 @@ class PromptedSwinBlockSequence(BaseModule):
             self.downsample = None
         # self.downsample = downsample
 
-    def forward(self, x, hw_shape):
-        # only support shallow prompt
-        assert not self.deep_prompt
+    def forward(self, x, hw_shape, deep_prompt=None):
+        # add support to deep prompt
+        # assert not self.deep_prompt
+        if self.deep_prompt:
+            assert deep_prompt is not None
+            return self.forward_deep(x, hw_shape, deep_prompt)
 
         for block in self.blocks:
             x = block(x, hw_shape)
+
+        if self.downsample:
+            x_down, down_hw_shape = self.downsample(x, hw_shape)
+            return x_down, down_hw_shape, x, hw_shape
+        else:
+            return x, hw_shape, x, hw_shape
+
+    def forward_deep(self, x, hw_shape, deep_prompt):
+        # forwards for deep prompt
+        assert self.deep_prompt
+        # only support prepend
+        assert self.prompt_location == "prepend"
+
+        # add the prompt embed before each blk call
+        B = x.shape[0]  # batchsize
+        num_blocks = len(self.blocks)
+        if deep_prompt.shape[0] != num_blocks:
+            # first layer
+            for i in range(num_blocks):
+                if i == 0:
+                    x = self.blocks[i](x, hw_shape)
+
+                else:
+                    prompt_emb = deep_prompt[i - 1].expand(B, -1, -1)
+                    x = torch.cat(
+                        (prompt_emb, x[:, self.num_prompts:, :]),
+                        dim=1
+                    )
+                    x = self.blocks[i](x, hw_shape)
+        else:
+            # other layers
+            for i in range(num_blocks):
+                prompt_emb = deep_prompt[i].expand(B, -1, -1)
+                x = torch.cat(
+                    (prompt_emb, x[:, self.num_prompts:, :]),
+                    dim=1
+                )
+                x = self.blocks[i](x, hw_shape)
 
         if self.downsample:
             x_down, down_hw_shape = self.downsample(x, hw_shape)
@@ -878,7 +919,34 @@ class PromptedSwinTransformer(BaseModule):
                 1, self.prompt_num_tokens, embed_dims))
             nn.init.uniform_(self.prompt_embeddings.data, -val, val)
 
-            assert not self.prompt_deep
+            # add support for deep prompt
+            # assert not self.prompt_deep
+            if self.prompt_deep:
+                # NOTE: only for 4 layers, need to be more flexible
+                self.deep_prompt_embeddings_0 = nn.Parameter(
+                    torch.zeros(
+                        depths[0] - 1, self.prompt_num_tokens, embed_dims
+                    ))
+                nn.init.uniform_(
+                    self.deep_prompt_embeddings_0.data, -val, val)
+                self.deep_prompt_embeddings_1 = nn.Parameter(
+                    torch.zeros(
+                        depths[1], self.prompt_num_tokens, embed_dims * 2
+                    ))
+                nn.init.uniform_(
+                    self.deep_prompt_embeddings_1.data, -val, val)
+                self.deep_prompt_embeddings_2 = nn.Parameter(
+                    torch.zeros(
+                        depths[2], self.prompt_num_tokens, embed_dims * 4
+                    ))
+                nn.init.uniform_(
+                    self.deep_prompt_embeddings_2.data, -val, val)
+                self.deep_prompt_embeddings_3 = nn.Parameter(
+                    torch.zeros(
+                        depths[3], self.prompt_num_tokens, embed_dims * 8
+                    ))
+                nn.init.uniform_(
+                    self.deep_prompt_embeddings_3.data, -val, val)
 
         else:
             raise ValueError("Other initiation scheme is not supported")
@@ -1021,16 +1089,38 @@ class PromptedSwinTransformer(BaseModule):
         # (batch_size, n_prompt + n_patches, hidden_dim)
 
         outs = []
-        for i, stage in enumerate(self.stages):
-            x, hw_shape, out, out_hw_shape = stage(x, hw_shape)
-            if i in self.out_indices:
-                norm_layer = getattr(self, f'norm{i}')
-                out = norm_layer(out)
-                # remove prompts
-                out = out[:, self.prompt_num_tokens:, :]
-                out = out.view(-1, *out_hw_shape,
-                               self.num_features[i]).permute(0, 3, 1,
-                                                             2).contiguous()
-                outs.append(out)
+        if not self.prompt_deep:
+            for i, stage in enumerate(self.stages):
+                x, hw_shape, out, out_hw_shape = stage(x, hw_shape)
+                if i in self.out_indices:
+                    norm_layer = getattr(self, f'norm{i}')
+                    out = norm_layer(out)
+                    # remove prompts
+                    out = out[:, self.prompt_num_tokens:, :]
+                    out = out.view(-1, *out_hw_shape,
+                                   self.num_features[i]).permute(0, 3, 1,
+                                                                 2).contiguous()
+                    outs.append(out)
 
+        else:
+            for i, stage_prompt in enumerate(
+                    zip(
+                        self.stages,
+                        [
+                            self.deep_prompt_embeddings_0,
+                            self.deep_prompt_embeddings_1,
+                            self.deep_prompt_embeddings_2,
+                            self.deep_prompt_embeddings_3
+                        ])):
+                stage, prompt_embeddings = stage_prompt
+                x, hw_shape, out, out_hw_shape = stage(x, hw_shape, prompt_embeddings)
+                if i in self.out_indices:
+                    norm_layer = getattr(self, f'norm{i}')
+                    out = norm_layer(out)
+                    # remove prompts
+                    out = out[:, self.prompt_num_tokens:, :]
+                    out = out.view(-1, *out_hw_shape,
+                                   self.num_features[i]).permute(0, 3, 1,
+                                                                 2).contiguous()
+                    outs.append(out)
         return outs
