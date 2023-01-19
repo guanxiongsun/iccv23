@@ -33,7 +33,7 @@ model = dict(
             dropout=0.,
             initiation='random',
         ),
-        frozen_stages=3,
+        frozen_stages=4,
     ),
     neck=dict(in_channels=[96, 192, 384, 768]))
 )
