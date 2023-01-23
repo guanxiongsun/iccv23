@@ -62,3 +62,4 @@ total_epochs = 3
 checkpoint_config = dict(interval=3)
 evaluation = dict(metric=["bbox"], interval=total_epochs)
 runner = dict(type="EpochBasedRunner", max_epochs=total_epochs)
+find_unused_parameters = True
