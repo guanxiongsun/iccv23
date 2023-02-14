@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
+import torch
+from addict import Dict
 from mmdet.models import build_detector
 from mmdet.models.predictors.attention_predictor import AttentionPredictor
 from mmdet.models.predictors.average_predictor import AveragePredictor
@@ -143,6 +145,7 @@ class VideoPrompt(BaseVideoDetector):
         frame_id = img_metas[0].get('frame_id', -1)
         assert frame_id >= 0
         frame_stride = img_metas[0].get('frame_stride', -1)
+        num_left_ref_imgs = img_metas[0].get('num_left_ref_imgs', -1)
 
         # test with adaptive stride
         if frame_stride < 1:
@@ -150,16 +153,31 @@ class VideoPrompt(BaseVideoDetector):
                 # [B, C, H, W]
                 ref_x = self.detector.backbone(ref_img[0])[-1]
                 # # [B*K, C]
-                # B, C, H, W = ref_x.shape
-                # ref_x = ref_x.view(B, C, -1).permute(0, 2, 1)
-                # ref_x = self.get_topk(ref_x)
                 # [num_prompt, C]
                 self.prompt = self.prompt_predictor(ref_x)
 
             x = self.detector.backbone(img, self.prompt)
             if self.detector.with_neck:
                 x = self.detector.neck(x)
+        else:
+            if frame_id == 0:
+                self.memo = Dict()
+                self.memo.img_metas = ref_img_metas[0]
+                # [B, C, H, W]
+                ref_x = self.detector.backbone(ref_img[0])[-1]
+                self.memo.feats = ref_x
+                self.memo.prompt = self.prompt_predictor(ref_x)
+            elif frame_id % frame_stride == 0:
+                assert ref_img is not None
+                # [1, C, H, W]
+                ref_x = self.detector.backbone(ref_img[0])[-1]
+                self.memo.feats = torch.cat(
+                    (self.memo.feats, ref_x), dim=0)[1:]
+                self.memo.prompt = self.prompt_predictor(ref_x)
 
+            x = self.detector.backbone(img, self.memo.prompt)
+            if self.detector.with_neck:
+                x = self.detector.neck(x)
         return x, img_metas
 
     def simple_test(self,
