@@ -35,7 +35,8 @@ class AttentionPredictor(BaseModule):
         # [B*K, C]
         B, C, H, W = ref_x.shape
         ref_x = ref_x.view(B, C, -1).permute(0, 2, 1)
-        ref_x = self.get_topk(ref_x)
+        ref_x = ref_x.reshape(-1, C)
+        # ref_x = self.get_topk(ref_x)
 
         # [n, c] -> [n, emb]
         ref_x = self.reduction(ref_x)
