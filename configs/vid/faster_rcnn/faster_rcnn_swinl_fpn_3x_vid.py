@@ -1,5 +1,5 @@
 _base_ = './faster_rcnn_swint_fpn_3x_vid_adam.py'
-pretrained = 'https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_base_patch4_window7_224.pth'  # noqa
+pretrained = 'https://github.com/SwinTransformer/storage/releases/download/v2.0.0/swinv2_large_patch4_window12to16_192to256_22kto1k_ft.pth'  # noqa
 # model settings
 model = dict(
     detector=dict(
