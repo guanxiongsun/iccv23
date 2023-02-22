@@ -9,6 +9,7 @@ import torch.distributed as dist
 from mmcv.runner import BaseModule, auto_fp16
 
 from mmdet.utils.logger import get_root_logger
+from tools.visualisation.wrapper import imshow_det_bboxes
 
 
 class BaseVideoDetector(BaseModule, metaclass=ABCMeta):
@@ -168,8 +169,28 @@ class BaseVideoDetector(BaseModule, metaclass=ABCMeta):
                 ref_img_metas=ref_img_metas,
                 **kwargs)
 
+    def forward(self, data):
+        other = torch.load('data.pth')
+        _ = other.pop('img')
+        ref_img = None
+        ref_img_metas = None
+        if 'ref_img' in other:
+            ref_img = other.pop('ref_img')
+            ref_img_metas = other.pop('ref_img_metas')
+
+            return self._forward(
+                data, return_loss=False,
+                img_metas=other['img_metas'][0].data,
+                ref_img=[ref_img[0].data.cuda()],
+                ref_img_metas=[ref_img_metas[0].data],)
+
+        else:
+            return self._forward(
+                data, return_loss=False,
+                img_metas=other['img_metas'][0].data)
+
     @auto_fp16(apply_to=('img', 'ref_img'))
-    def forward(self,
+    def _forward(self,
                 img,
                 img_metas,
                 ref_img=None,
@@ -338,19 +359,20 @@ class BaseVideoDetector(BaseModule, metaclass=ABCMeta):
         if out_file is not None:
             show = False
         # draw bounding boxes
-        mmcv.imshow_det_bboxes(
+        # mmcv.imshow_det_bboxes(
+        imshow_det_bboxes(
             img,
             bboxes,
             labels,
-            class_names=self.CLASSES,
-            score_thr=score_thr,
-            bbox_color=bbox_color,
-            text_color=text_color,
-            thickness=thickness,
-            font_scale=font_scale,
-            win_name=win_name,
+            # class_names=self.CLASSES,
+            # score_thr=score_thr,
+            # bbox_color=bbox_color,
+            # text_color=text_color,
+            # thickness=thickness,
+            # font_scale=font_scale,
+            # win_name=win_name,
             show=show,
-            wait_time=wait_time,
+            # wait_time=wait_time,
             out_file=out_file)
 
         if not (show or out_file):

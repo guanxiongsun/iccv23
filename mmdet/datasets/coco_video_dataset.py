@@ -40,7 +40,7 @@ class CocoVideoDataset(CocoDataset):
                      filter_key_img=True,
                      method='uniform',
                      return_key_img=True),
-                 test_load_ann=False,
+                 test_load_ann=True,
                  *args,
                  **kwargs):
         self.load_as_video = load_as_video
@@ -196,6 +196,32 @@ class CocoVideoDataset(CocoDataset):
                     for i in range(num_ref_imgs):
                         ref_id = round(i * stride)
                         ref_img_ids.append(img_ids[ref_id])
+            elif method == 'test_with_global_and_local_frames':
+                if frame_id == 0:
+                    num_ref_imgs_global = num_ref_imgs // 2
+                    stride = float(len(img_ids) - 1) / (num_ref_imgs - 1)
+                    for i in range(num_ref_imgs_global):
+                        ref_id = round(i * stride)
+                        ref_img_ids.append(img_ids[ref_id])
+
+                    num_ref_imgs_local = num_ref_imgs - num_ref_imgs_global
+                    for i in range(num_ref_imgs_local):
+                        for i in range(frame_range[0], 1):
+                            ref_img_ids.append(img_ids[0])
+                        for i in range(1, frame_range[1] + 1):
+                            ref_id = min(round(i * stride), len(img_ids) - 1)
+                            ref_img_ids.append(img_ids[ref_id])
+
+                elif frame_id % stride == 0:
+                    num_ref_imgs_local = num_ref_imgs // 2
+                    ref_id = min(
+                        round(frame_id + frame_range[1] * stride),
+                        len(img_ids) - 1)
+                    ref_img_ids.append(img_ids[ref_id])
+                    img_info['num_left_ref_imgs'] = abs(frame_range[0]) \
+                        if isinstance(frame_range, list) else frame_range
+                    img_info['frame_stride'] = stride
+
             elif method == 'test_with_fix_stride':
                 if frame_id == 0:
                     for i in range(frame_range[0], 1):

@@ -17,6 +17,7 @@ train_pipeline = [
 
 test_pipeline = [
     dict(type="LoadImageFromFile"),
+    dict(type="LoadAnnotations", with_bbox=True),
     dict(
         type="MultiScaleFlipAug",
         img_scale=(1000, 600),
@@ -27,7 +28,7 @@ test_pipeline = [
             dict(type="Normalize", **img_norm_cfg),
             dict(type="Pad", size_divisor=16),
             dict(type="ImageToTensor", keys=["img"]),
-            dict(type="VideoCollect", keys=["img"]),
+            dict(type="VideoCollect", keys=["img","gt_bboxes", "gt_labels"]),
         ],
     ),
 ]

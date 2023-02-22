@@ -8,7 +8,8 @@ import torch
 import torch.distributed as dist
 from mmcv.runner import BaseModule, auto_fp16
 
-from mmdet.core.visualization import imshow_det_bboxes
+# from mmdet.core.visualization import imshow_det_bboxes
+from tools.visualisation.wrapper import imshow_det_bboxes
 
 
 class BaseDetector(BaseModule, metaclass=ABCMeta):
@@ -153,8 +154,13 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
             assert 'proposals' not in kwargs
             return self.aug_test(imgs, img_metas, **kwargs)
 
+
+    def forward(self, data):
+        img_metas = torch.load('img_metas.pth')
+        return self.forward_test([data], [img_metas])
+
     @auto_fp16(apply_to=('img', ))
-    def forward(self, img, img_metas, return_loss=True, **kwargs):
+    def _forward(self, img, img_metas, return_loss=True, **kwargs):
         """Calls either :func:`forward_train` or :func:`forward_test` depending
         on whether ``return_loss`` is ``True``.
 
@@ -339,17 +345,17 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
             img,
             bboxes,
             labels,
-            segms,
-            class_names=self.CLASSES,
-            score_thr=score_thr,
-            bbox_color=bbox_color,
-            text_color=text_color,
-            mask_color=mask_color,
-            thickness=thickness,
-            font_size=font_size,
-            win_name=win_name,
+            # segms,
+            # class_names=self.CLASSES,
+            # score_thr=score_thr,
+            # bbox_color=bbox_color,
+            # text_color=text_color,
+            # mask_color=mask_color,
+            # thickness=thickness,
+            # font_size=font_size,
+            # win_name=win_name,
             show=show,
-            wait_time=wait_time,
+            # wait_time=wait_time,
             out_file=out_file)
 
         if not (show or out_file):

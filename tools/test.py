@@ -218,6 +218,10 @@ def main():
 
     if not distributed:
         model = MMDataParallel(model, device_ids=[0])
+        # pytorch_total_params = sum(p.numel() for p in model.parameters())
+        # print(f"Total number of parameters: {pytorch_total_params}")
+        # if True:
+        #     return
         outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
                                   args.show_score_thr)
     else:

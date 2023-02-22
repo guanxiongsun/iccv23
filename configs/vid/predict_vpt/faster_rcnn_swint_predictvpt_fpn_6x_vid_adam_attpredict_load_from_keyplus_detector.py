@@ -226,13 +226,14 @@ train_pipeline = [
 
 test_pipeline = [
     dict(type="LoadMultiImagesFromFile"),
+    dict(type="SeqLoadAnnotations", with_bbox=True, with_mask=False),
     dict(type="SeqResize", img_scale=(1000, 600), keep_ratio=True),
     dict(type="SeqRandomFlip", share_params=True, flip_ratio=0.0),
     dict(type="SeqNormalize", **img_norm_cfg),
     dict(type="SeqPad", size_divisor=16),
     dict(
         type="VideoCollect",
-        keys=["img"],
+        keys=["img", "gt_bboxes", "gt_labels"],
         meta_keys=("num_left_ref_imgs", "frame_stride"),
     ),
     dict(type="ConcatVideoReferences"),

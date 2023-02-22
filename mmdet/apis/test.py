@@ -7,11 +7,76 @@ import time
 
 import mmcv
 import torch
+from torch import nn
 import torch.distributed as dist
 from mmcv.image import tensor2imgs
 from mmcv.runner import get_dist_info
 
 from mmdet.core import encode_mask_results
+from pathlib import Path
+import os
+from typing import Dict, Iterable, Callable
+from tools.visualisation import utils as vis_utils
+import warnings
+warnings.filterwarnings('ignore')
+warnings.simplefilter('ignore')
+import cv2
+from pytorch_grad_cam import EigenCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image, scale_cam_image
+from PIL import Image
+import torchvision
+import numpy as np
+
+
+class FasterRCNNBoxScoreTarget:
+    def __init__(self, labels, bounding_boxes, iou_threshold=0.5):
+        self.labels = labels
+        self.bounding_boxes = bounding_boxes
+        self.iou_threshold = iou_threshold
+
+    def __call__(self, model_outputs):
+        output = torch.Tensor([0])
+        if torch.cuda.is_available():
+            output = output.cuda()
+
+        if len(model_outputs["boxes"]) == 0:
+            return output
+
+        for box, label in zip(self.bounding_boxes, self.labels):
+            box = torch.Tensor(box[None, :])
+            if torch.cuda.is_available():
+                box = box.cuda()
+
+            ious = torchvision.ops.box_iou(box, model_outputs["boxes"])
+            index = ious.argmax()
+            if ious[0, index] > self.iou_threshold and model_outputs["labels"][index] == label:
+                score = ious[0, index] + model_outputs["scores"][index]
+                output = output + score
+        return output
+
+
+
+class FeatureExtractor(nn.Module):
+    def __init__(self, model: nn.Module, layers: Iterable[str]):
+        super().__init__()
+        self.model = model
+        self.layers = layers
+        self._features = {layer: torch.empty(0) for layer in layers}
+
+        for layer_id in layers:
+            layer = dict([*self.model.named_modules()])[layer_id]
+            layer.register_forward_hook(self.save_outputs_hook(layer_id))
+
+    def save_outputs_hook(self, layer_id: str) -> Callable:
+        def fn(_, __, output):
+            self._features[layer_id] = output
+        return fn
+
+    def forward(self, data):
+        # _ = self.model(x)
+        _ = self.model(return_loss=False, rescale=True, **data)
+        return self._features
+
 
 
 def single_gpu_test(model,
@@ -24,8 +89,87 @@ def single_gpu_test(model,
     dataset = data_loader.dataset
     prog_bar = mmcv.ProgressBar(len(dataset))
     for i, data in enumerate(data_loader):
+        if 'ILSVRC2015_val_00000001' not in data['img_metas'][0].data[0][0]['filename']:
+            prog_bar.update()
+            continue
+
+        if 0 < data['img_metas'][0].data[0][0]['frame_id'] < 339:
+            prog_bar.update()
+            continue
+
+        if data['img_metas'][0].data[0][0]['frame_id'] > 345:
+            prog_bar.update()
+            continue
+
+        img_metas = data['img_metas'][0].data[0]
+        out_file = osp.join(out_dir, img_metas[0]['ori_filename'])
+
         with torch.no_grad():
-            result = model(return_loss=False, rescale=True, **data)
+            def fasterrcnn_reshape_transform(x):
+                target_size = x[-1].size()[-2:]
+                activations = []
+                for _x in x:
+                    activations.append(torch.nn.functional.interpolate(torch.abs(_x), target_size, mode='bilinear'))
+                activations = torch.cat(activations, axis=1)
+                return activations
+
+            try:
+                target_layers = [model.module.backbone]
+            except:
+                target_layers = [model.module.detector.backbone]
+
+            cam = EigenCAM(model, target_layers, use_cuda=True,
+                           reshape_transform=fasterrcnn_reshape_transform)
+            tensor = data['img'][0]
+            torch.save(data, 'data.pth')
+            labels = data['gt_labels'][0]
+            boxes = data['gt_bboxes'][0]
+            targets = [FasterRCNNBoxScoreTarget(labels=labels, bounding_boxes=boxes)]
+
+            grayscale_cam = cam(tensor, targets=targets)[0, :, :]
+            cv_img = cv2.imread(data['img_metas'][0].data[0][0]['filename'])
+            cv_img = cv2.resize(cv_img, (1008, 576))
+            cv_img = np.asarray(cv_img, dtype=np.float64)
+            cv_img /= 255
+
+            cam_image = show_cam_on_image(cv_img, grayscale_cam, use_rgb=True)
+            # save img to file
+            p = Path(out_file)
+            img_foler = os.path.join(p.parent, 'grad_cam')
+            if not os.path.exists(img_foler):
+                os.makedirs(img_foler)
+
+            new_filepath = os.path.join(img_foler, p.stem + f'_grad_cam.jpg')
+            # mmcv.imwrite(feat_img, new_filepath)
+            vis_utils.plt_save(cam_image, new_filepath)
+
+            #
+            #
+            # feature_hook = FeatureExtractor(model, layers=["module.detector.backbone"])
+            # results = feature_hook(data)
+            #
+            # # save backbone features visualization
+            # all_feats = results['module.detector.backbone']
+            # for i in range(len(all_feats)):
+            #     feat = all_feats[i][0]
+            #     feat_img = vis_utils.feature2im(feat)
+            #     # vis_utils.plt_show(feat_img)
+            #
+            #     # save img to file
+            #     p = Path(out_file)
+            #     img_foler = os.path.join(p.parent, 'backbone_feat')
+            #     if not os.path.exists(img_foler):
+            #         os.makedirs(img_foler)
+            #
+            #     new_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.jpg')
+            #     pth_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.pth')
+            #     # mmcv.imwrite(feat_img, new_filepath)
+            #     vis_utils.plt_save(feat_img, new_filepath)
+            #     torch.save(feat, pth_filepath)
+            #
+            # result = model(return_loss=False, rescale=True, **data)
+
+        continue
 
         batch_size = len(result)
         if show or out_dir:
