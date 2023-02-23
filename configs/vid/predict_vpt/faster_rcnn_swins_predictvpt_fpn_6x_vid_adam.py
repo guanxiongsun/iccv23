@@ -1,4 +1,4 @@
-_base_ = './faster_rcnn_swint_predictvpt_fpn_3x_vid_adam.py'
+_base_ = './faster_rcnn_swint_predictvpt_fpn_6x_vid_adam.py'
 pretrained = 'https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_small_patch4_window7_224.pth'  # noqa
 # model settings
 model = dict(
