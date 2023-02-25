@@ -233,30 +233,69 @@ def inference_detector(model, imgs):
     data['img'][0] = data['img'][0].unsqueeze(0)
     # forward the model
     with torch.no_grad():
-        feature_hook = FeatureExtractor(model, layers=["backbone"])
-        results = feature_hook(data)
+        # if 'ILSVRC2015_val_00022000' not in data['img_metas'][0].data[0][0]['filename']:
+        #     prog_bar.update()
+        #     continue
 
-        # save backbone features visualization
-        all_feats = results['backbone']
-        for i in range(len(all_feats)):
-            feat = all_feats[i][0]
-            feat_img = vis_utils.feature2im(feat)
-            # vis_utils.plt_show(feat_img)
+        result = model(return_loss=False, rescale=True, **data)
+        # batch_size = len(result)
+        # if show or out_dir:
+        #     if batch_size == 1 and isinstance(data['img'][0], torch.Tensor):
+        #         img_tensor = data['img'][0]
+        #     else:
+        #         img_tensor = data['img'][0].data[0]
+        #     img_metas = data['img_metas'][0].data[0]
+        #     imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
+        #     assert len(imgs) == len(img_metas)
+        #
+        #     for i, (img, img_meta) in enumerate(zip(imgs, img_metas)):
+        #         h, w, _ = img_meta['img_shape']
+        #         img_show = img[:h, :w, :]
+        #
+        #         ori_h, ori_w = img_meta['ori_shape'][:-1]
+        #         img_show = mmcv.imresize(img_show, (ori_w, ori_h))
+        #
+        #         if out_dir:
+        #             out_file = osp.join(out_dir, img_meta['ori_filename'])
+        #         else:
+        #             out_file = None
+        #
+        #         model.module.show_result(
+        #             img_show,
+        #             result[i],
+        #             show=show,
+        #             out_file=out_file,
+        #             score_thr=show_score_thr)
+        #
+        # for _ in range(batch_size):
+        #     prog_bar.update()
 
-            # save img to file
-            p = Path(img)
-            img_foler = os.path.join(p.parent, 'backbone_feat')
-            if not os.path.exists(img_foler):
-                os.makedirs(img_foler)
-
-            new_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.jpg')
-            pth_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.pth')
-            # mmcv.imwrite(feat_img, new_filepath)
-            vis_utils.plt_save(feat_img, new_filepath)
-            torch.save(feat, pth_filepath)
+        # """ feature hook """
+        # feature_hook = FeatureExtractor(model, layers=["backbone"])
+        # results = feature_hook(data)
+        #
+        # # save backbone features visualization
+        # all_feats = results['backbone']
+        # for i in range(len(all_feats)):
+        #     feat = all_feats[i][0]
+        #     feat_img = vis_utils.feature2im(feat)
+        #     # vis_utils.plt_show(feat_img)
+        #
+        #     # save img to file
+        #     p = Path(img)
+        #     img_foler = os.path.join(p.parent, 'backbone_feat')
+        #     if not os.path.exists(img_foler):
+        #         os.makedirs(img_foler)
+        #
+        #     new_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.jpg')
+        #     pth_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.pth')
+        #     # mmcv.imwrite(feat_img, new_filepath)
+        #     vis_utils.plt_save(feat_img, new_filepath)
+        #     torch.save(feat, pth_filepath)
+        #"""
 
         # results = model(return_loss=False, rescale=True, **data)
-    return results
+    return None
     # if not is_batch:
     #     return results[0]
     # else:

@@ -89,22 +89,31 @@ def single_gpu_test(model,
     dataset = data_loader.dataset
     prog_bar = mmcv.ProgressBar(len(dataset))
     for i, data in enumerate(data_loader):
-        if 'ILSVRC2015_val_00000001' not in data['img_metas'][0].data[0][0]['filename']:
-            prog_bar.update()
-            continue
 
-        if 0 < data['img_metas'][0].data[0][0]['frame_id'] < 339:
+        """
+        ##############CAM visualisation####################
+        if 'ILSVRC2015_val_00022000' not in data['img_metas'][0].data[0][0]['filename']:
             prog_bar.update()
             continue
+        # if data['img_metas'][0].data[0][0]['frame_id'] == 0:
+        #     with torch.no_grad():
+        #         result = model(return_loss=False, rescale=True, **data)
+        #         prog_bar.update()
+        #         continue
 
-        if data['img_metas'][0].data[0][0]['frame_id'] > 345:
-            prog_bar.update()
-            continue
+        # if 0 < data['img_metas'][0].data[0][0]['frame_id'] < 70:
+        #     prog_bar.update()
+        #     continue
+        #
+        # if data['img_metas'][0].data[0][0]['frame_id'] > 345:
+        #     prog_bar.update()
+        #     continue
 
         img_metas = data['img_metas'][0].data[0]
         out_file = osp.join(out_dir, img_metas[0]['ori_filename'])
 
         with torch.no_grad():
+            prog_bar.update()
             def fasterrcnn_reshape_transform(x):
                 target_size = x[-1].size()[-2:]
                 activations = []
@@ -121,14 +130,20 @@ def single_gpu_test(model,
             cam = EigenCAM(model, target_layers, use_cuda=True,
                            reshape_transform=fasterrcnn_reshape_transform)
             tensor = data['img'][0]
-            torch.save(data, 'data.pth')
-            labels = data['gt_labels'][0]
-            boxes = data['gt_bboxes'][0]
+            # torch.save(data, 'data.pth')
+
+            result = model(return_loss=False, rescale=True, **data)
+
+            t = torch.tensor(result[0][26])
+            # labels = data['gt_labels'][0]
+            # boxes = data['gt_bboxes'][0]
+            labels = t[:, 4].fill_(26)
+            boxes = t[:, :4]
             targets = [FasterRCNNBoxScoreTarget(labels=labels, bounding_boxes=boxes)]
 
-            grayscale_cam = cam(tensor, targets=targets)[0, :, :]
+            grayscale_cam = cam(data, targets=targets)[0, :, :]
             cv_img = cv2.imread(data['img_metas'][0].data[0][0]['filename'])
-            cv_img = cv2.resize(cv_img, (1008, 576))
+            cv_img = cv2.resize(cv_img, tuple(tensor.shape[-2:][::-1]))
             cv_img = np.asarray(cv_img, dtype=np.float64)
             cv_img /= 255
 
@@ -142,35 +157,42 @@ def single_gpu_test(model,
             new_filepath = os.path.join(img_foler, p.stem + f'_grad_cam.jpg')
             # mmcv.imwrite(feat_img, new_filepath)
             vis_utils.plt_save(cam_image, new_filepath)
+            """
 
-            #
-            #
-            # feature_hook = FeatureExtractor(model, layers=["module.detector.backbone"])
-            # results = feature_hook(data)
-            #
-            # # save backbone features visualization
-            # all_feats = results['module.detector.backbone']
-            # for i in range(len(all_feats)):
-            #     feat = all_feats[i][0]
-            #     feat_img = vis_utils.feature2im(feat)
-            #     # vis_utils.plt_show(feat_img)
-            #
-            #     # save img to file
-            #     p = Path(out_file)
-            #     img_foler = os.path.join(p.parent, 'backbone_feat')
-            #     if not os.path.exists(img_foler):
-            #         os.makedirs(img_foler)
-            #
-            #     new_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.jpg')
-            #     pth_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.pth')
-            #     # mmcv.imwrite(feat_img, new_filepath)
-            #     vis_utils.plt_save(feat_img, new_filepath)
-            #     torch.save(feat, pth_filepath)
-            #
-            # result = model(return_loss=False, rescale=True, **data)
+        """
+        ###########################Feature maps visualization#####################
+        # feature_hook = FeatureExtractor(model, layers=["module.detector.backbone"])
+        # results = feature_hook(data)
+        #
+        # # save backbone features visualization
+        # all_feats = results['module.detector.backbone']
+        # for i in range(len(all_feats)):
+        #     feat = all_feats[i][0]
+        #     feat_img = vis_utils.feature2im(feat)
+        #     # vis_utils.plt_show(feat_img)
+        #
+        #     # save img to file
+        #     p = Path(out_file)
+        #     img_foler = os.path.join(p.parent, 'backbone_feat')
+        #     if not os.path.exists(img_foler):
+        #         os.makedirs(img_foler)
+        #
+        #     new_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.jpg')
+        #     pth_filepath = os.path.join(img_foler, p.stem + f'_backbone_feat_{i}.pth')
+        #     # mmcv.imwrite(feat_img, new_filepath)
+        #     vis_utils.plt_save(feat_img, new_filepath)
+        #     torch.save(feat, pth_filepath)
+        #
+        # result = model(return_loss=False, rescale=True, **data)       
+        """
 
-        continue
-
+        # """
+        ###################### normal inference ############################
+        if 'ILSVRC2015_val_00022000' not in data['img_metas'][0].data[0][0]['filename']:
+            prog_bar.update()
+            continue
+        with torch.no_grad():
+            result = model(return_loss=False, rescale=True, **data)
         batch_size = len(result)
         if show or out_dir:
             if batch_size == 1 and isinstance(data['img'][0], torch.Tensor):
@@ -208,6 +230,7 @@ def single_gpu_test(model,
 
         for _ in range(batch_size):
             prog_bar.update()
+        # """
     return results
 
 

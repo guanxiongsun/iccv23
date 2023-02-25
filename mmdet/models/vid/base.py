@@ -150,6 +150,11 @@ class BaseVideoDetector(BaseModule, metaclass=ABCMeta):
             # proposals.
             if 'proposals' in kwargs:
                 kwargs['proposals'] = kwargs['proposals'][0]
+
+            all_keys = list(kwargs.keys())
+            for key in all_keys:
+                if 'gt' in key:
+                    _ = kwargs.pop(key)
             return self.simple_test(
                 imgs[0],
                 img_metas[0],
@@ -169,28 +174,28 @@ class BaseVideoDetector(BaseModule, metaclass=ABCMeta):
                 ref_img_metas=ref_img_metas,
                 **kwargs)
 
-    def forward(self, data):
-        other = torch.load('data.pth')
-        _ = other.pop('img')
-        ref_img = None
-        ref_img_metas = None
-        if 'ref_img' in other:
-            ref_img = other.pop('ref_img')
-            ref_img_metas = other.pop('ref_img_metas')
-
-            return self._forward(
-                data, return_loss=False,
-                img_metas=other['img_metas'][0].data,
-                ref_img=[ref_img[0].data.cuda()],
-                ref_img_metas=[ref_img_metas[0].data],)
-
-        else:
-            return self._forward(
-                data, return_loss=False,
-                img_metas=other['img_metas'][0].data)
+    # def forward(self, data):
+    #     other = torch.load('data.pth')
+    #     _ = other.pop('img')
+    #     ref_img = None
+    #     ref_img_metas = None
+    #     if 'ref_img' in other:
+    #         ref_img = other.pop('ref_img')
+    #         ref_img_metas = other.pop('ref_img_metas')
+    #
+    #         return self._forward(
+    #             data, return_loss=False,
+    #             img_metas=other['img_metas'][0].data,
+    #             ref_img=[ref_img[0].data.cuda()],
+    #             ref_img_metas=[ref_img_metas[0].data],)
+    #
+    #     else:
+    #         return self._forward(
+    #             data, return_loss=False,
+    #             img_metas=other['img_metas'][0].data)
 
     @auto_fp16(apply_to=('img', 'ref_img'))
-    def _forward(self,
+    def forward(self,
                 img,
                 img_metas,
                 ref_img=None,

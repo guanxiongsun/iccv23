@@ -145,6 +145,11 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
             # proposals.
             if 'proposals' in kwargs:
                 kwargs['proposals'] = kwargs['proposals'][0]
+
+            all_keys = list(kwargs.keys())
+            for key in all_keys:
+                if 'gt' in key:
+                    _ = kwargs.pop(key)
             return self.simple_test(imgs[0], img_metas[0], **kwargs)
         else:
             assert imgs[0].size(0) == 1, 'aug test does not support ' \
@@ -155,12 +160,12 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
             return self.aug_test(imgs, img_metas, **kwargs)
 
 
-    def forward(self, data):
-        img_metas = torch.load('img_metas.pth')
-        return self.forward_test([data], [img_metas])
+    # def forward(self, data):
+    #     img_metas = torch.load('img_metas.pth')
+    #     return self.forward_test([data], [img_metas])
 
     @auto_fp16(apply_to=('img', ))
-    def _forward(self, img, img_metas, return_loss=True, **kwargs):
+    def forward(self, img, img_metas, return_loss=True, **kwargs):
         """Calls either :func:`forward_train` or :func:`forward_test` depending
         on whether ``return_loss`` is ``True``.
 

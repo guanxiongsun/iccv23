@@ -254,8 +254,8 @@ class Visualiser:
         if trackid is not None:
             txt = "{} {:.2f} trackid_{}".format(self.names[cat], conf, trackid)
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cat_size = cv2.getTextSize(txt, font, 0.5, 2)[0]
-        cv2.rectangle(self.imgs[img_id], (bbox[0], bbox[1]), (bbox[2], bbox[3]), c, 2)
+        cat_size = cv2.getTextSize(txt, font, 1, 3)[0]
+        cv2.rectangle(self.imgs[img_id], (bbox[0], bbox[1]), (bbox[2], bbox[3]), c, 5)
         if show_txt:
             # cv2.rectangle(self.imgs[img_id],
             #               (bbox[0], bbox[1] - cat_size[1] - 2),
@@ -273,19 +273,19 @@ class Visualiser:
             # draw a rectangle along with the text
             cv2.rectangle(
                 overlay,
-                (bbox[0], bbox[1] - cat_size[1] - 2),
-                (bbox[0] + cat_size[0], bbox[1] - 2),
+                (bbox[0], bbox[1] - 2),
+                (bbox[0] + cat_size[0] + 2, bbox[1] + cat_size[1] + 5),
                 c,
                 -1,
             )
             cv2.putText(
                 overlay,
                 txt,
-                (bbox[0], bbox[1] - 2),
+                (bbox[0], bbox[1] + cat_size[1] + 2),
                 font,
-                0.5,
-                (0, 0, 0),
-                thickness=1,
+                1,
+                (255, 255, 255),
+                thickness=3,
                 lineType=cv2.LINE_AA,
             )
 
@@ -300,8 +300,8 @@ class Visualiser:
             self.num_boxes[img_id] += 1
         cv2.rectangle(
             self.imgs[img_id],
-            (10, self.num_boxes[img_id] * (cat_size[1] + 2) + 1),
-            (10 + cat_size[0], (self.num_boxes[img_id] + 1) * (cat_size[1] + 2) - 1),
+            (5, self.num_boxes[img_id] * (cat_size[1] + 5)),
+            (10 + cat_size[0], (self.num_boxes[img_id] + 1) * (cat_size[1] + 5)),
             c,
             -1,
         )
@@ -310,9 +310,9 @@ class Visualiser:
             txt,
             (10, (self.num_boxes[img_id] + 1) * (cat_size[1] + 2) - 1),
             font,
-            0.5,
-            (0, 0, 0),
-            thickness=1,
+            1,
+            (255, 255, 255),
+            thickness=3,
             lineType=cv2.LINE_AA,
         )
 
