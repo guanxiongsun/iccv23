@@ -5,19 +5,19 @@ from mmcv.runner import BaseModule
 
 class AttentionPredictor(BaseModule):
     def __init__(self, in_channels, num_attention_blocks=16, init_cfg=None,
-                 num_prompts=5, embed_dims=96
+                 num_prompts=5, prompt_dims=96
                  ):
         super(AttentionPredictor, self).__init__(init_cfg)
 
-        self.reduction = nn.Linear(in_channels, embed_dims)
+        self.reduction = nn.Linear(in_channels, prompt_dims)
 
-        self.query = nn.Parameter(torch.zeros(num_prompts, embed_dims))
+        self.query = nn.Parameter(torch.zeros(num_prompts, prompt_dims))
         nn.init.normal_(self.query)
 
-        self.fc_embed = nn.Linear(embed_dims, embed_dims)
-        self.ref_fc_embed = nn.Linear(embed_dims, embed_dims)
-        self.fc = nn.Linear(embed_dims, embed_dims)
-        self.ref_fc = nn.Linear(embed_dims, embed_dims)
+        self.fc_embed = nn.Linear(prompt_dims, prompt_dims)
+        self.ref_fc_embed = nn.Linear(prompt_dims, prompt_dims)
+        self.fc = nn.Linear(prompt_dims, prompt_dims)
+        self.ref_fc = nn.Linear(prompt_dims, prompt_dims)
         self.num_attention_blocks = num_attention_blocks
 
     @staticmethod

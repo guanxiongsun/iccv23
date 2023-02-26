@@ -24,6 +24,9 @@ class VideoPrompt(BaseVideoDetector):
                  train_cfg=None,
                  test_cfg=None,
                  predictor='att',
+                 embed_dims=768,
+                 num_prompts=5,
+                 prompt_dims=96,
                  ):
         super(VideoPrompt, self).__init__(init_cfg)
         if isinstance(pretrained, dict):
@@ -44,9 +47,14 @@ class VideoPrompt(BaseVideoDetector):
         # create prompt predict network
         print("The predictor is {}".format(predictor))
         if predictor == 'att':
-            self.prompt_predictor = AttentionPredictor(768)
+            self.prompt_predictor = AttentionPredictor(embed_dims,
+                                                       num_prompts=num_prompts,
+                                                       prompt_dims=prompt_dims)
         elif predictor == 'avg':
-            self.prompt_predictor = AveragePredictor(768)
+            self.prompt_predictor = AveragePredictor(embed_dims,
+                                                     num_prompts=num_prompts,
+                                                     prompt_dims=prompt_dims,
+                                                     )
         else:
             raise ValueError
 
