@@ -6,11 +6,11 @@ from mmcv.runner import BaseModule
 
 class AveragePredictor(BaseModule):
     def __init__(self, in_channels, init_cfg=None,
-                 num_prompts=5, embed_dims=96
+                 num_prompts=5, prompt_dims=96
                  ):
         super(AveragePredictor, self).__init__(init_cfg)
         self.num_prompts = num_prompts
-        self.reduction = nn.Linear(in_channels, embed_dims)
+        self.reduction = nn.Linear(in_channels, prompt_dims)
 
     @staticmethod
     def get_topk(x, k=100):
