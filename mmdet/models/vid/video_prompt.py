@@ -86,8 +86,7 @@ class VideoPrompt(BaseVideoDetector):
             'selsa video detector only supports 1 batch size per gpu for now.'
 
         # [B, C, H, W]
-        with torch.no_grad():
-            ref_x = self.detector.backbone(ref_img[0])[-1]
+        ref_x = self.detector.backbone(ref_img[0])[-1]
 
         # [num_prompt, C]
         prompt = self.prompt_predictor(ref_x)
