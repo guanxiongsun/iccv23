@@ -1,5 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
+
+import torch
+
 from mmdet.models import build_detector
 from mmdet.models.predictors.attention_predictor import AttentionPredictor
 from mmdet.models.predictors.average_predictor import AveragePredictor
@@ -83,7 +86,8 @@ class VideoPrompt(BaseVideoDetector):
             'selsa video detector only supports 1 batch size per gpu for now.'
 
         # [B, C, H, W]
-        ref_x = self.detector.backbone(ref_img[0])[-1]
+        with torch.no_grad():
+            ref_x = self.detector.backbone(ref_img[0])[-1]
 
         # [num_prompt, C]
         prompt = self.prompt_predictor(ref_x)
