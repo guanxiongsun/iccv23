@@ -91,8 +91,8 @@ class SELSAVideoPrompt(BaseVideoDetector):
             # ref_x [4, C, H, W]
             prompt_ref = ref_img[0][:2]
             selsa_ref = ref_img[0][2:]
-            prompt_ref = self.detector.backbone(prompt_ref)
-
+            with torch.no_grad():
+                prompt_ref = self.detector.backbone(prompt_ref)
             prompt = self.prompt_predictor(prompt_ref[-1])
 
             all_imgs = torch.cat([img, selsa_ref])
