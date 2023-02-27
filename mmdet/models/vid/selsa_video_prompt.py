@@ -25,8 +25,11 @@ class SELSAVideoPrompt(BaseVideoDetector):
                  frozen_modules=None,
                  train_cfg=None,
                  test_cfg=None,
-                 predictor='avg',
+                 predictor='att',
                  extra_frames=False,
+                 embed_dims=768,
+                 num_prompts=5,
+                 prompt_dims=96,
                  ):
         super(SELSAVideoPrompt, self).__init__(init_cfg)
         if isinstance(pretrained, dict):
@@ -47,9 +50,14 @@ class SELSAVideoPrompt(BaseVideoDetector):
         # create prompt predict network
         print("The predictor is {}".format(predictor))
         if predictor == 'att':
-            self.prompt_predictor = AttentionPredictor(768)
+            self.prompt_predictor = AttentionPredictor(embed_dims,
+                                                       num_prompts=num_prompts,
+                                                       prompt_dims=prompt_dims)
         elif predictor == 'avg':
-            self.prompt_predictor = AveragePredictor(768)
+            self.prompt_predictor = AveragePredictor(embed_dims,
+                                                     num_prompts=num_prompts,
+                                                     prompt_dims=prompt_dims,
+                                                     )
         else:
             raise ValueError
 
