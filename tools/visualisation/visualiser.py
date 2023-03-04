@@ -254,8 +254,8 @@ class Visualiser:
         if trackid is not None:
             txt = "{} {:.2f} trackid_{}".format(self.names[cat], conf, trackid)
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cat_size = cv2.getTextSize(txt, font, 1, 3)[0]
-        cv2.rectangle(self.imgs[img_id], (bbox[0], bbox[1]), (bbox[2], bbox[3]), c, 5)
+        cat_size = cv2.getTextSize(txt, font, 3, 5)[0]
+        cv2.rectangle(self.imgs[img_id], (bbox[0], bbox[1]), (bbox[2], bbox[3]), c, 15)
         if show_txt:
             # cv2.rectangle(self.imgs[img_id],
             #               (bbox[0], bbox[1] - cat_size[1] - 2),
@@ -264,7 +264,7 @@ class Visualiser:
             #             font, 0.5, (0, 0, 0), thickness=1, lineType=cv2.LINE_AA)
 
             # Add by sgx: show bbox and text Transparently
-            alpha = 0.5
+            alpha = 0.8
             # create two copies of the original image -- one for
             # the overlay and one for the final output image
             overlay = self.imgs[img_id].copy()
@@ -273,19 +273,19 @@ class Visualiser:
             # draw a rectangle along with the text
             cv2.rectangle(
                 overlay,
-                (bbox[0], bbox[1] - 2),
-                (bbox[0] + cat_size[0] + 2, bbox[1] + cat_size[1] + 5),
+                (bbox[0]-5, bbox[1] - cat_size[1] - 25),
+                (bbox[0] + cat_size[0], bbox[1]),
                 c,
                 -1,
             )
             cv2.putText(
                 overlay,
                 txt,
-                (bbox[0], bbox[1] + cat_size[1] + 2),
+                (bbox[0], bbox[1] - 15),
                 font,
-                1,
+                3,
                 (255, 255, 255),
-                thickness=3,
+                thickness=5,
                 lineType=cv2.LINE_AA,
             )
 
@@ -300,19 +300,19 @@ class Visualiser:
             self.num_boxes[img_id] += 1
         cv2.rectangle(
             self.imgs[img_id],
-            (5, self.num_boxes[img_id] * (cat_size[1] + 5)),
-            (10 + cat_size[0], (self.num_boxes[img_id] + 1) * (cat_size[1] + 5)),
+            (5, self.num_boxes[img_id] * (cat_size[1] + 10)),
+            (10 + cat_size[0], (self.num_boxes[img_id] + 1) * (cat_size[1] + 10)),
             c,
             -1,
         )
         cv2.putText(
             self.imgs[img_id],
             txt,
-            (10, (self.num_boxes[img_id] + 1) * (cat_size[1] + 2) - 1),
+            (10, (self.num_boxes[img_id] + 1) * (cat_size[1] + 10) - 7),
             font,
-            1,
+            3,
             (255, 255, 255),
-            thickness=3,
+            thickness=5,
             lineType=cv2.LINE_AA,
         )
 
