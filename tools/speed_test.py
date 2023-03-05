@@ -199,6 +199,9 @@ def main():
         model = fuse_conv_bn(model)
 
     model = MMDataParallel(model, device_ids=[0])
+    total_params = sum(p.numel() for p in model.parameters())
+    speed_tester.logger.info(f'Total params: {total_params}')
+    speed_tester.logger.info('total params is {} M'.format(total_params / 1e6))
 
     # speed test
     model.eval()
